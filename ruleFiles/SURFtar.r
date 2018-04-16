@@ -176,6 +176,14 @@ SURFtar(){
 
 #----------------------------------------------
  #Step 3- Move the tarball and manifest into the collection, along with previously existing meta-data file.
+ #We also clean up the empty collection directory structure here.
+	
+ foreach(*row in SELECT COLL_NAME where COLL_PARENT_NAME = *Coll){
+  msiRmColl(*row.COLL_NAME,"forceFlag=",*Status);
+  writeLine("stdout",*row.COLL_NAME++" was removed, status: "++*Status);
+ }	
+	
+	
  msiDataObjRename(*TarUp, *TarDown, "0", *Stat);
  msiDataObjPhymv(*TarDown, *tarResc, "null", "", "null", *stat);
 
