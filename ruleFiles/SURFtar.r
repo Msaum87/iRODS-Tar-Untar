@@ -183,7 +183,7 @@ SURFtar(){
   writeLine("stdout",*row.COLL_NAME++" was removed, status: "++*Status);
  }	
 	
-	
+ msiDataObjTrim(*TarUp, "null","null",1,"null",*Status)
  msiDataObjRename(*TarUp, *TarDown, "0", *Stat);
  msiDataObjPhymv(*TarDown, *tarResc, "null", "", "null", *stat);
 
