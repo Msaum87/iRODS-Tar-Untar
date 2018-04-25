@@ -172,59 +172,62 @@ SURFtar(){
  msiDataObjClose(*CKS, *stat);
 
 #----------------------------------------------
- #Step 3- Cleanup. Deleting objects as they are now in the tarball, then moving tarball and adjacent files into collection
+ #Step 3- Cleanup. Deleting objects as they are now in the tarball, 
+ #then moving tarball and adjacent files into collection
  
- #Now we scrub the data objects left in the target collection 
- #This provides a fix for the foreach process deleting data objects. If a total return
- #was more than 255 data objects, you encounter a race condition for no more rows found.
- #Collection delection. Getting the total collections found
+ #Deleting objects in a foreach loop will race-conditon out
+ #if there are more than 255 items found
+ #To counter this, we use a while/foreach combo that counts out
+ #and resets if over 200 items.
+ 
+ #First, delete all sub-collections (and their contents)
+ #Get the total sub-collections
  msiExecStrCondQuery("select count(COLL_NAME) where COLL_PARENT_NAME = '*Coll'", *COLLcount);
  foreach(*COLLcount){
-  msiGetValByKey(*COLLcount, "COLL_NAME", *totalCOLL);
+   msiGetValByKey(*COLLcount, "COLL_NAME", *totalCOLL);
  }
  *totalCOLL=int(*totalCOLL);
  *i=0
+ #Using *i to count and reset, we delete in batches of 200 and reset the foreach
  while(*totalCOLL >0){
-  foreach(*row in SELECT COLL_NAME where COLL_PARENT_NAME = *Coll){
+   foreach(*row in SELECT COLL_NAME where COLL_PARENT_NAME = *Coll){
    *i=*i+1;
+   #If *i is at 200, break the foreach and reset.
    if(*i >=200){
-    *i=0;
-    break;
+     *i=0;
+     break;
    }
-  msiRmColl(*row.COLL_NAME,"forceFlag=",*Status);
-  writeLine("stdout",*row.COLL_NAME++" was removed, status: "++*Status);
-  *totalCOLL=*totalCOLL-1;
-  }  
+   #As long as our counter is below 201, we proceed to delete and lower total
+   msiRmColl(*row.COLL_NAME,"forceFlag=",*Status);
+   writeLine("stdout",*row.COLL_NAME++" was removed, status: "++*Status);
+   *totalCOLL=*totalCOLL-1;
+   }  
  }
 
  #Now we scrub the data objects left in the target collection 
- #This provides a fix for the foreach process deleting data objects. If a total return
- #was more than 255 data objects, you encounter a race condition for no more rows found.
- #First, how many files do we need to delete.
+ #Using the same while/foreach to counter the race condition
+ #So, get the total number of data objects
  msiExecStrCondQuery("select count(DATA_NAME) where COLL_NAME = '*Coll'", *DOcount);
  foreach(*DOcount){
-  msiGetValByKey(*DOcount, "DATA_NAME", *totalDO);
+   msiGetValByKey(*DOcount, "DATA_NAME", *totalDO);
  }
  *totalDO=int(*totalDO);
-
  #Now, we count that we never hit an increment higher than 200. This is adjustable.
  *i = 0
-while(*totalDO > 0){
-  foreach(*cleanup in select DATA_NAME where COLL_NAME = *Coll){
-   *ipath=*Coll++"/"++*cleanup.DATA_NAME;
-   *i=*i+1;
-   if(*i >= 200){
-    *i=0;
-    break;
-   }#if
-  msiDataObjUnlink("objPath="++*ipath++"++++forceFlag=", *rmstat);
-  writeLine("stdout",*ipath++", "++", total = "++str(*totalDO));
-  *totalDO=*totalDO-1; 
-  }#foreach
+ while(*totalDO > 0){
+   foreach(*cleanup in select DATA_NAME where COLL_NAME = *Coll){
+     *ipath=*Coll++"/"++*cleanup.DATA_NAME;
+     *i=*i+1;
+     #If *i is at 200, break the foreach and reset.
+     if(*i >= 200){
+       *i=0;
+       break;
+     }#if
+     msiDataObjUnlink("objPath="++*ipath++"++++forceFlag=", *rmstat);
+     writeLine("stdout",*ipath++", "++", total = "++str(*totalDO));
+     *totalDO=*totalDO-1; 
+   }#foreach
  }#while
-
-
-
 
  #Lastly, we move our tarball, ToC, chksums
  msiDataObjTrim(*TarUp, "null","null","1","null",*Status)
