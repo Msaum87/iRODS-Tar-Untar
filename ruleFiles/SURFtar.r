@@ -63,11 +63,11 @@ SURFtar(){
  #Tarball file name, with a suffix to make it uniquely identifiable
  *TarUp=*foundation++"/"++*Tar++".tar";
  *TarDown=*Coll++"/"++*Tar++".tar"; 
-	
+  
  #Checksum File for manifest/record
  *tocUp=*foundation++"/"++*ToCfile;
  *tocDown=*Coll++"/"++*ToCfile;
-	
+  
  #Excluded file
  *EXup=*foundation++"/"++*excludeFile; 
  *EXdown=*Coll++"/"++*excludeFile; 
@@ -90,7 +90,7 @@ SURFtar(){
  if(ifExists(*EXup)==1){
     writeLine("stdout","metadata file already exists");
     msiExit(-1,"Warning, almost overwrote meta-data. Check in"++*foundation++".");
- }	    
+ }      
     #Make sure that the exlucded file actually exists..
  if((ifExists(*EXdown))==0){
     writeLine("stdout","excluded file does not exist");
@@ -146,7 +146,6 @@ SURFtar(){
 
     msiDataObjWrite(*TOC, *rpath++"\n", *stat);
 
-    msiDataObjUnlink("objPath="++*ipath++"++++forceFlag=", *rmstat);
  }#*Coll search
 
  #This second query pulls the subdirectories of our target collection. Adding "/%" to our collection name.
@@ -166,8 +165,6 @@ SURFtar(){
     }
 
     msiDataObjWrite(*TOC, *rpath++"\n", *stat);
-
-    msiDataObjUnlink("objPath="++*ipath++"++++forceFlag=", *rmstat);
  }#*Coll search
 
  #Close our file
@@ -175,14 +172,64 @@ SURFtar(){
  msiDataObjClose(*CKS, *stat);
 
 #----------------------------------------------
- #Step 3- Move the tarball and manifest into the collection, along with previously existing meta-data file.
- #We also clean up the empty collection directory structure here.
-	
- foreach(*row in SELECT COLL_NAME where COLL_PARENT_NAME = *Coll){
-  msiRmColl(*row.COLL_NAME,"forceFlag=",*Status);
-  writeLine("stdout",*row.COLL_NAME++" was removed, status: "++*Status);
- }	
-	
+ #Step 3- Cleanup. Deleting objects as they are now in the tarball, 
+ #then moving tarball and adjacent files into collection
+ 
+ #Deleting objects in a foreach loop will race-conditon out
+ #if there are more than 255 items found
+ #To counter this, we use a while/foreach combo that counts out
+ #and resets if over 200 items.
+ 
+ #First, delete all sub-collections (and their contents)
+ #Get the total sub-collections
+ msiExecStrCondQuery("select count(COLL_NAME) where COLL_PARENT_NAME = '*Coll'", *COLLcount);
+ foreach(*COLLcount){
+   msiGetValByKey(*COLLcount, "COLL_NAME", *totalCOLL);
+ }
+ *totalCOLL=int(*totalCOLL);
+ *i=0
+ #Using *i to count and reset, we delete in batches of 200 and reset the foreach
+ while(*totalCOLL >0){
+   foreach(*row in SELECT COLL_NAME where COLL_PARENT_NAME = *Coll){
+   *i=*i+1;
+   #If *i is at 200, break the foreach and reset.
+   if(*i >=200){
+     *i=0;
+     break;
+   }
+   #As long as our counter is below 201, we proceed to delete and lower total
+   msiRmColl(*row.COLL_NAME,"forceFlag=",*Status);
+   writeLine("stdout",*row.COLL_NAME++" was removed, status: "++*Status);
+   *totalCOLL=*totalCOLL-1;
+   }  
+ }
+
+ #Now we scrub the data objects left in the target collection 
+ #Using the same while/foreach to counter the race condition
+ #So, get the total number of data objects
+ msiExecStrCondQuery("select count(DATA_NAME) where COLL_NAME = '*Coll'", *DOcount);
+ foreach(*DOcount){
+   msiGetValByKey(*DOcount, "DATA_NAME", *totalDO);
+ }
+ *totalDO=int(*totalDO);
+ #Now, we count that we never hit an increment higher than 200. This is adjustable.
+ *i = 0
+ while(*totalDO > 0){
+   foreach(*cleanup in select DATA_NAME where COLL_NAME = *Coll){
+     *ipath=*Coll++"/"++*cleanup.DATA_NAME;
+     *i=*i+1;
+     #If *i is at 200, break the foreach and reset.
+     if(*i >= 200){
+       *i=0;
+       break;
+     }#if
+     msiDataObjUnlink("objPath="++*ipath++"++++forceFlag=", *rmstat);
+     writeLine("stdout",*ipath++", "++", total = "++str(*totalDO));
+     *totalDO=*totalDO-1; 
+   }#foreach
+ }#while
+
+ #Lastly, we move our tarball, ToC, chksums
  msiDataObjTrim(*TarUp, "null","null","1","null",*Status)
  msiDataObjRename(*TarUp, *TarDown, "0", *Stat);
  msiDataObjPhymv(*TarDown, *tarResc, "null", "", "null", *stat);
