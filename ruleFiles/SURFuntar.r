@@ -85,7 +85,7 @@ SURFuntar(){
                            DATA_NAME, 
                            COLL_NAME 
                     WHERE 
-                           COLL_NAME = *CollRec 
+                           COLL_NAME like *CollRec 
      ){
      #Our logical iRODS Path
      *ipath=*row.COLL_NAME++"/"++*row.DATA_NAME;
