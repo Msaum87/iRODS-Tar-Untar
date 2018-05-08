@@ -43,7 +43,7 @@ SURFuntar(){
 
  if(ifExists(*Coll++"/"++*CheckSums)== 1){
     msiDataObjOpen(*Coll++"/"++*CheckSums,*CKsums);
-    msiDataObjRead(*CKsums, 25000, *file_BUF);
+    msiDataObjRead(*CKsums, 5000000, *file_BUF);
 
     #To prevent the searching of similarily named collections (such as ~/FileGen and ~/FileGeneration)
     #We have to search twice, once for the precise collection and another with 
