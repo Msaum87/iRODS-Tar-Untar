@@ -145,7 +145,6 @@ scrubRE(*i){
   *charList=split(*chars, ",");
 
 
-  writeLine("stdout","INPUT is "++*i);
   foreach(*char in *charList){
     #BEGIN MIDDLE
     #This catches any char not first or last and escapes it
