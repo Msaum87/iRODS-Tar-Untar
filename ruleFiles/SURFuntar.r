@@ -120,7 +120,7 @@ SURFuntar(){
      }
     }        
  msiDataObjClose(*CKsums, *stat);
-# msiDataObjUnlink("objPath="++*Coll++"/"++*CheckSums++"++++forceFlag=", *stat2);
+ msiDataObjUnlink("objPath="++*Coll++"/"++*CheckSums++"++++forceFlag=", *stat2);
  writeLine("stdout","Deleted checksums file "++*Coll++"/"++*CheckSums);
  }
 
