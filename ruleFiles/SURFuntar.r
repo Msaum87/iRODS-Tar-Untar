@@ -9,6 +9,8 @@
 #If no tarfile is specified, my default one from
 #the INPUT line will be used, or attempted anyway.
 
+#VERSIONING
+#v1.1- Added a RegExp scrubber for the metadata tags
 #-----------
 #TO DO
 #-----------
@@ -22,12 +24,12 @@ SURFuntar(){
  #Need to separate the Collection and Data Object Name into two values.
  msiSplitPath(*Tar, *Coll, *tData);
  
- #The name of the table of contents / manifest file you want generated
+ #The name of the table of contents / manifest file you generated
  *tocFile="manifest.txt";
  
  #This exception here will prevent us from checking checksums in data that was not tarballed
  #This includes: the tarball itself, the checksum file itself, and a meta-data.xml file
- *excludeFile="metadata.xml";
+ *excludeFile="FileGen.log";
 
 
 
@@ -57,10 +59,12 @@ SURFuntar(){
      *ipath=*row.COLL_NAME++"/"++*row.DATA_NAME;
      #Our relative path to the tar collection
      *rpath="."++triml(*ipath, *Coll);
+     #Scrubs the RegExp for special chars, escaping them.
+     *scrubbed=scrubRE(*rpath);
      #Checks our new checksum of each file from the tarball
      msiDataObjChksum(*ipath, "forceChksum=", *new);
      #Builds our Tag Structure for filtering meta-data out of a bytes-buffer
-     msiStrToBytesBuf("<PRETAG>*rpath::</PRETAG>*rpath<POSTTAG>\n</POSTTAG>", *tag_BUF);
+     msiStrToBytesBuf("<PRETAG>*scrubbed::</PRETAG>*rpath<POSTTAG>\n</POSTTAG>", *tag_BUF);
      msiReadMDTemplateIntoTagStruct(*tag_BUF, *tags);
      #Takes our Tag Structure and searches the opened checksum manifest for a match
      msiExtractTemplateMDFromBuf(*file_BUF, *tags, *cKVP);
@@ -91,10 +95,12 @@ SURFuntar(){
      *ipath=*row.COLL_NAME++"/"++*row.DATA_NAME;
      #Our relative path to the tar collection
      *rpath="."++triml(*ipath, *Coll);
+     #Scrubs the RegExp for special chars, escaping them.
+     *scrubbed=scrubRE(*rpath);
      #Checks our new checksum of each file from the tarball
      msiDataObjChksum(*ipath, "forceChksum=", *new);
      #Builds our Tag Structure for filtering meta-data out of a bytes-buffer
-     msiStrToBytesBuf("<PRETAG>*rpath::</PRETAG>*rpath<POSTTAG>\n</POSTTAG>", *tag_BUF);
+     msiStrToBytesBuf("<PRETAG>*scrubbed::</PRETAG>*rpath<POSTTAG>\n</POSTTAG>", *tag_BUF);
      msiReadMDTemplateIntoTagStruct(*tag_BUF, *tags);
      #Takes our Tag Structure and searches the opened checksum manifest for a match
      msiExtractTemplateMDFromBuf(*file_BUF, *tags, *cKVP);
@@ -114,7 +120,7 @@ SURFuntar(){
      }
     }        
  msiDataObjClose(*CKsums, *stat);
- msiDataObjUnlink("objPath="++*Coll++"/"++*CheckSums++"++++forceFlag=", *stat2);
+# msiDataObjUnlink("objPath="++*Coll++"/"++*CheckSums++"++++forceFlag=", *stat2);
  writeLine("stdout","Deleted checksums file "++*Coll++"/"++*CheckSums);
  }
 
@@ -126,6 +132,49 @@ SURFuntar(){
  writeLine("stdout","Deleting original tarball "++*Tar);
  writeLine("stdout","Deleted manifest "++*Coll++"/"++*tocFile);
 }
+
+
+#This is the RegExp scrubber for our tag structure
+scrubRE(*i){
+  #This will filter through a string and escape out predefied chars.
+  #This is a comma separated list of characters to escape.
+  #Keep the \ symbol first to prevent clipping later added escapes.
+  #In addition to regexp, I also included a space.
+  #Everything within the pairs of backticks (``) is treated as a string
+  *chars=``\,^,$,{,},[,],(,),.,*,+,?,|,<,>,-, ,&,``;
+  *charList=split(*chars, ",");
+
+
+  writeLine("stdout","INPUT is "++*i);
+  foreach(*char in *charList){
+    #BEGIN MIDDLE
+    #This catches any char not first or last and escapes it
+    *iList=split(*i, *char);
+    if(size(*iList) > 1){
+      *i=hd(*iList);
+      foreach(*iTail in tl(*iList)){
+        *i=*i++"\\"++*char++*iTail;
+      } #foreach *iTail 
+    } #if size > 1
+    #END MIDDLE
+    #BEGIN BEGINNING
+    #Catches any first character that matches our list, escapes it
+    msiSubstr(*i, "0", "1", *iHead);
+    if(*iHead == *char){
+      *i="\\"++*i;
+    } #if *iHead
+    #END BEGINNING
+    msiSubstr(*i, "-1", "1", *iLast)
+    if(*iLast == *char){
+     msiSubstr(*i, "0", str(strlen(*i) - 1), *j)
+     *i=*j++"\\"++*char;
+    }
+
+  } #foreach *chars 
+  #Return our final escaped string.
+  "*i";
+} #scrubRE
+
 
 #Matthew's basic file-existance checker function.
 #Checks if a file exists
