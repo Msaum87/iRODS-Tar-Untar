@@ -45,7 +45,7 @@ SURFuntar(){
 
  if(ifExists(*Coll++"/"++*CheckSums)== 1){
     msiDataObjOpen(*Coll++"/"++*CheckSums,*CKsums);
-    msiDataObjRead(*CKsums, 5000000, *file_BUF);
+    msiDataObjRead(*CKsums, 2^31-1, *file_BUF);
 
     #To prevent the searching of similarily named collections (such as ~/FileGen and ~/FileGeneration)
     #We have to search twice, once for the precise collection and another with 
@@ -136,42 +136,27 @@ SURFuntar(){
 
 #This is the RegExp scrubber for our tag structure
 scrubRE(*i){
-  #This will filter through a string and escape out predefied chars.
-  #This is a comma separated list of characters to escape.
-  #Keep the \ symbol first to prevent clipping later added escapes.
-  #In addition to regexp, I also included a space.
-  #Everything within the pairs of backticks (``) is treated as a string
-  *chars=``\,^,$,{,},[,],(,),.,*,+,?,|,<,>,-, ,&,``;
-  *charList=split(*chars, ",");
-
-
-  foreach(*char in *charList){
-    #BEGIN MIDDLE
-    #This catches any char not first or last and escapes it
-    *iList=split(*i, *char);
-    if(size(*iList) > 1){
-      *i=hd(*iList);
-      foreach(*iTail in tl(*iList)){
-        *i=*i++"\\"++*char++*iTail;
-      } #foreach *iTail 
-    } #if size > 1
-    #END MIDDLE
-    #BEGIN BEGINNING
-    #Catches any first character that matches our list, escapes it
-    msiSubstr(*i, "0", "1", *iHead);
-    if(*iHead == *char){
-      *i="\\"++*i;
-    } #if *iHead
-    #END BEGINNING
-    msiSubstr(*i, "-1", "1", *iLast)
-    if(*iLast == *char){
-     msiSubstr(*i, "0", str(strlen(*i) - 1), *j)
-     *i=*j++"\\"++*char;
-    }
-
-  } #foreach *chars 
-  #Return our final escaped string.
-  "*i";
+  *output = "";
+  # This is a comma separated list of characters to escape.
+  # Keep the \ symbol first to prevent clipping later added escapes.
+  # In addition to regexp, I also included a space.
+  # Everything within the pairs of backticks (``) is treated as a string
+  *chars =``\,^,$,{,},[,],(,),.,*,+,?,|,<,>,-, ,&,``;
+  *charList = split(*chars, ",");
+  # Loop through the input string
+  for (*pos = 0; *pos < strlen(*i); *pos = *pos + 1) {
+     *c = substr(*i, *pos, *pos + 1);
+     *o = *c;
+     foreach(*char in *charList){
+      if ( *char == *c ) {
+        *o = "\\" ++ *c;
+        break;
+      }
+     }
+     *output = *output ++ *o;
+  }
+  # Return our escaped string
+  "*output";
 } #scrubRE
 
 
