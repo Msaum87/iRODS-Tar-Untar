@@ -46,7 +46,20 @@ SURFuntar(){
  if(ifExists(*Coll++"/"++*CheckSums)== 1){
     msiDataObjOpen(*Coll++"/"++*CheckSums,*CKsums);
     msiDataObjRead(*CKsums, 2^31-1, *file_BUF);
-
+      
+  
+    #This block of code will convert our buff to a string for manipulation.
+    #We trim the leading "." and everything after the "::"
+    #Then we run a check if the file exists in the collection.
+    #If a file is not found, the process is halted and exits
+    msiBytesBufToStr(*file_BUF, *count_STR);
+    *countList=split(*count_STR,"\n");
+    foreach(*cnt in *countList){
+      if(ifExists(*Coll++trimr(triml(*cnt,"\."),"::"))!=1){ 
+        writeLine("stdout","WARNING: DID NOT FIND "++*cnt);
+        msiExit("-1","WARNING! NOT ALL FILES EXPECTED IN TARBALL WERE EXTRACTED. HALTING PROCESS!");
+      }
+    
     #To prevent the searching of similarily named collections (such as ~/FileGen and ~/FileGeneration)
     #We have to search twice, once for the precise collection and another with 
     foreach(*row in SELECT 
