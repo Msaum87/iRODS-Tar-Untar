@@ -59,7 +59,8 @@ SURFuntar(){
         writeLine("stdout","WARNING: DID NOT FIND "++*cnt);
         msiExit("-1","WARNING! NOT ALL FILES EXPECTED IN TARBALL WERE EXTRACTED. HALTING PROCESS!");
       }
-    
+    }
+  
     #To prevent the searching of similarily named collections (such as ~/FileGen and ~/FileGeneration)
     #We have to search twice, once for the precise collection and another with 
     foreach(*row in SELECT 
