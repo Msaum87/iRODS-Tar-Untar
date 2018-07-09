@@ -34,17 +34,22 @@ SURFuntar(){
 
 
  #Step 1, untar the collection after moving it to the right resource
-  msiDataObjPhymv(*Tar, *Resc, "null", "", "null", *stat);  
+ msiDataObjPhymv(*Tar, *Resc, "null", "", "null", *stat);  
  #Due to the a bug, it appears that tar-balls over 4GB or so fail. 
- #Reports Vary based on systems. This next line is for when this bug is fixed.
+ #Reports vary based on systems. This next line is for when this bug is fixed.
+ 
  #msiTarFileExtract(*Tar, *Coll, *Resc, *Stat);
 
  #Until then, we need to call an msiExecCmd to manually untar it at a unix level
  #And then register the items found.
- foreach(*tarball in SELECT DATA_PATH where DATA_NAME = *Tar){
-  msiExecCmd("untar", "*tarball", "", "", "", "*result");
-  writeLine("stdout", "Unpacked *tarball.");
+ foreach(*tarball in select DATA_PATH, RESC_LOC where DATA_NAME = *tData AND COLL_NAME = *Coll){
+  *i = *tarball.DATA_PATH; #Physical data path
+  *j = trimr(*i, "/");  #Physical data dir
+  *k = *tarball.RESC_LOC;  #PHysical server for resouce object
+  msiExecCmd("untar", "*i *j", "*k", "", "", *result);
  }
+ msiPhyPathReg(*Coll, "*Resc", *j, "collection", *stat);
+
  writeLine("stdout","Unpacking TAR file to "++*Coll);
 
  #Step 2, validate the checksums of the files.
