@@ -1,0 +1,23 @@
+#!/bin/sh
+#Author Matthew Saum
+#Copyright 2018 SURFsara BV
+#Apache License 2.0
+
+#This is to allow iRODS to untar very large tarball files.
+#Currently iRODS does not unpack tarballs over ~10GB (varies).
+#It will be called via the untar rule, and triggered to run 
+#on the resource object server where the tarball has been moved to.
+#Best practice: make sure this exists on all servers.
+#In the rule: msiExecCmd("untar", "tarPath tarDir", "resourceServer", "", *returnCode);
+
+
+
+#Prevents from registering the tmpPhyBunDirs created by
+#the iRODS Tarball creation process. These are empty but 
+#iRODS does not clean itself up directory-wise
+
+rm -r $2/tmpPhyBunDir*
+
+#then we untar into the correct location
+
+tar -xf $1 -C $2
