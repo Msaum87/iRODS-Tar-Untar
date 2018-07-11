@@ -48,7 +48,7 @@ SURFuntar(){
          where  
                 DATA_NAME = '*tData' 
          and    COLL_NAME = '*Coll' 
-         and     DATA_REPL_NUM = '0')
+         and    DATA_REPL_NUM = '0')
    {
    *i = *tarball.DATA_PATH; #Physical data path
    *j = trimr(*i, "/");  #Physical data dir
