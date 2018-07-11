@@ -32,7 +32,6 @@ SURFuntar(){
  *excludeFile="FileGen.log";
 
 
-
  #Step 1, untar the collection after moving it to the right resource
  msiDataObjPhymv(*Tar, *Resc, "null", "", "null", *stat);  
  #Due to the a bug, it appears that tar-balls over 4GB or so fail. 
@@ -42,11 +41,20 @@ SURFuntar(){
 
  #Until then, we need to call an msiExecCmd to manually untar it at a unix level
  #And then register the items found.
- foreach(*tarball in select DATA_PATH, RESC_LOC where DATA_NAME = *tData AND COLL_NAME = *Coll){
-  *i = *tarball.DATA_PATH; #Physical data path
-  *j = trimr(*i, "/");  #Physical data dir
-  *k = *tarball.RESC_LOC;  #PHysical server for resouce object
-  msiExecCmd("untar", "*i *j", "*k", "", "", *result);
+ foreach(*tarball in 
+         select 
+                DATA_PATH, 
+                DATA_RESC_HIER 
+         where  
+                DATA_NAME = '*tData' 
+         and    COLL_NAME = '*Coll' 
+         and     DATA_REPL_NUM = '0')
+   {
+   *i = *tarball.DATA_PATH; #Physical data path
+   *j = trimr(*i, "/");  #Physical data dir
+   *k = triml(triml(triml(triml(triml(triml(*tarball.DATA_RESC_HIER, ";"), ";"), ";"), ";"), ";"), ";");  #True resource of object
+   foreach(*row in select RESC_LOC where RESC_NAME = '*k'){*l=*row.RESC_LOC;}   #Pulls the server location of true resource
+   msiExecCmd("untar", "*i *j", "*l", "", "", *result);
  }
  msiPhyPathReg(*Coll, "*Resc", *j, "collection", *stat);
 
