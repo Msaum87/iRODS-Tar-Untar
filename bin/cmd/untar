@@ -10,14 +10,4 @@
 #Best practice: make sure this exists on all servers.
 #In the rule: msiExecCmd("untar", "tarPath tarDir", "resourceServer", "", *returnCode);
 
-
-
-#Prevents from registering the tmpPhyBunDirs created by
-#the iRODS Tarball creation process. These are empty but 
-#iRODS does not clean itself up directory-wise
-
-rm -r $2/tmpPhyBunDir*
-
-#then we untar into the correct location
-
 tar -xf $1 -C $2
